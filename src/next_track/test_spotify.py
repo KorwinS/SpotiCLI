@@ -7,6 +7,7 @@ STATUS = {
     "item": {
         "name": "Gary",
         "artists": [{"name": "George"}],
+        "uri": "spotify:track:928347ionst",
     },
     "device": {"name": "device"},
 }
@@ -24,7 +25,7 @@ class TestCLISpotify:
         )
 
         status = session.status()
-        assert status == "Now Playing: Gary by George on device"
+        assert status == ["George", "Gary", "spotify:track:928347ionst"]
 
     @responses.activate
     def test_search_play(self):

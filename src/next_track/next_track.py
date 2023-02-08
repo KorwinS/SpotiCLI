@@ -70,22 +70,23 @@ class CLISpotify:
             "context_uri": f"spotify:{search_type}:{item_id}",
             "position_ms": 0,
         }
+        # print(paylaod)
         player = self.client(method="PUT", endpoint="me/player/play", json=paylaod)
         print(player.text)
         return json.dumps({"item_id": item_id, "status": player.status_code})
 
     def status(self):
-        r = requests.get(url=BASE_URL + "me/player", headers=HEADERS)
-
+        r = self.client(method="GET", endpoint="me/player")
         if r.status_code == 200 and r.json()["is_playing"] is True:
             item = r.json()["item"]
             message = f"Now Playing: {item['name']} by {item['artists'][0]['name']} on {r.json()['device']['name']}"
             print(message)
+            return [item["artists"][0]["name"], item["name"], item["uri"]]
+
         else:
             message = "Not playing anywhere"
             print(message)
-
-        return [item["artists"][0]["name"], item["name"], item["uri"]]
+            return message
 
     def help(self):
         print(
