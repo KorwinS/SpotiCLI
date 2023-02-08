@@ -10,6 +10,7 @@ from spotipy.oauth2 import SpotifyOAuth
 
 from database.db import Database
 from next_track.next_track import CLISpotify
+from collections import Counter
 
 load_dotenv()
 
@@ -82,6 +83,31 @@ class Playlist:
         r = self.client(method="GET", endpoint="me/player")
         return r.json()["item"]["uri"]
 
+    def find_duplicates(self, playlist_id):
+        # print(playlist_id)
+        r = self.client(
+            method="GET",
+            endpoint=f"playlists/{playlist_id}/tracks",
+            params={"fields": "items(track(name,id))"},
+        )
+        seen = []
+        for i in r.json()["items"]:
+            # print(i["track"]["id"])
+            seen.append(i["track"]["id"])
+        dupes = []
+        [dupes.append(k) for k, v in Counter(seen).items() if v > 1]
+        return dupes
+
+    def delete_tracks(self, track_list, playlist_id):
+        uris = {"tracks": []}
+        for i in track_list:
+            uris["tracks"].append({"uri": f"spotify:track:{i}"})
+        print(uris)
+        r = self.client(
+            method="DELETE", endpoint=f"playlists/{playlist_id}/tracks", json=uris
+        )
+        print(r.text)
+
 
 if __name__ == "__main__":
     pl = Playlist()
@@ -99,9 +125,24 @@ if __name__ == "__main__":
 
         SESSION.status()
 
+    if sys.argv[1] == "dedupe":
+        option_list = []
+
+        p_lists = pl.get_my_playlists()
+
+        for i in p_lists:
+            # print(i[1])
+            option_list.append(i[0])
+
+        option, index = pick(option_list, "Select Playlist to Deduplicate:")
+
+        dupes = pl.find_duplicates(p_lists[index][1])
+        pl.delete_tracks(track_list=dupes, playlist_id=p_lists[index][1])
+
     if sys.argv[1] == "add":
         pl.add_current_to_playlist("7JcJWgaDeQS1CUXDsBlJ5X")  # Terminal Tracks
-        with Database("my_db.db") as db:
+        with Database("/Users/korwin/code/spotify/my_db.db") as db:
+            db.execute("CREATE TABLE IF NOT EXISTS spotify (artist, track, track_uri)")
             db.write(table="spotify", data=SESSION.status())
             q = db.getLast(table="spotify", columns="track, artist")
             print(f"{q[0]} by {q[1]} added to database")
