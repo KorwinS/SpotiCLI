@@ -1,4 +1,4 @@
-import json
+# import json
 import os
 import sys
 import time
@@ -15,7 +15,7 @@ from collections import Counter
 load_dotenv()
 
 BASE_URL = "https://api.spotify.com/v1/"
-SCOPE = "user-read-playback-state,user-modify-playback-state,playlist-read-private,playlist-modify-private"
+SCOPE = "user-read-playback-state,user-modify-playback-state,playlist-read-private,playlist-modify-private"  # noqa
 CREDS = SpotifyOAuth(
     client_id=os.getenv("CLIENT_ID"),
     client_secret=os.getenv("CLIENT_SECRET"),
@@ -108,6 +108,19 @@ class Playlist:
         )
         print(r.text)
 
+    def recommend(self, seed_tracks):
+        """Recommends similar music
+
+        Args:
+            seed_tracks (list): the track to seed the recommendation engine
+        """
+        r = self.client(
+            method="GET",
+            endpoint="recommendations",
+            params={"seed_tracks": seed_tracks},
+        )
+        return r
+
 
 if __name__ == "__main__":
     pl = Playlist()
@@ -118,9 +131,7 @@ if __name__ == "__main__":
             option_list.append(i[0])
 
         option, index = pick(option_list, "Select a Playlist: ")
-
         pl.play_playlist(playlist_id=pl.get_my_playlists()[index][1])
-
         time.sleep(1)
 
         SESSION.status()
@@ -135,7 +146,6 @@ if __name__ == "__main__":
             option_list.append(i[0])
 
         option, index = pick(option_list, "Select Playlist to Deduplicate:")
-
         dupes = pl.find_duplicates(p_lists[index][1])
         pl.delete_tracks(track_list=dupes, playlist_id=p_lists[index][1])
 
@@ -148,3 +158,22 @@ if __name__ == "__main__":
             print(f"{q[0]} by {q[1]} added to database")
     if sys.argv[1] == "current":
         print(pl.get_current_track())
+
+    if sys.argv[1] == "recommend":
+        current = pl.get_current_track()
+        # print(current)
+
+        results = list()
+        rec = pl.recommend(current.split(":")[2])
+        for i in rec.json()["tracks"]:
+            results.append((i["name"], i["uri"]))
+
+        options = []
+        for i in results:
+            options.append(i[0])
+        option, index = pick(options, "For you to browse")
+        r = pl.client(
+            method="PUT", endpoint="me/player/play", json={"uris": [results[index][1]]}
+        )
+        time.sleep(1.5)
+        SESSION.status()
