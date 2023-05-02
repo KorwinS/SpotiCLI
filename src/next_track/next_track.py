@@ -9,7 +9,7 @@ from spotipy.oauth2 import SpotifyOAuth
 
 load_dotenv()
 
-BASE_URL = "https://api.spotify.com/v1/"
+BASE_URL = "https://api.spotify.com/v1"
 SCOPE = "user-read-playback-state,user-modify-playback-state"
 CREDS = SpotifyOAuth(
     client_id=os.getenv("CLIENT_ID"),
@@ -37,7 +37,7 @@ class CLISpotify:
         return r
 
     def next_track(self):
-        r = self.client(method="POST", endpoint="me/player/next")
+        r = self.client(method="POST", endpoint="/me/player/next")
         print(r.text)
         if r.status_code == 204:
             return "playing"
@@ -45,7 +45,7 @@ class CLISpotify:
             return "no session to play"
 
     def pause_track(self):
-        r = self.client(method="PUT", endpoint="me/player/pause")
+        r = self.client(method="PUT", endpoint="/me/player/pause")
         print(r.text)
         if r.status_code == 204:
             return "paused"
@@ -58,7 +58,7 @@ class CLISpotify:
         if search_type == "album":
             # I don't want shuffle on for albums, so this turns it off
             self.client(
-                method="PUT", endpoint="me/player/shuffle", params={"state": False}
+                method="PUT", endpoint="/me/player/shuffle", params={"state": False}
             )
         # take the first one for now, iterate later
         return search.json()[f"{search_type}s"]["items"][0]["id"]
@@ -71,15 +71,15 @@ class CLISpotify:
             "position_ms": 0,
         }
         # print(paylaod)
-        player = self.client(method="PUT", endpoint="me/player/play", json=paylaod)
+        player = self.client(method="PUT", endpoint="/me/player/play", json=paylaod)
         print(player.text)
         return json.dumps({"item_id": item_id, "status": player.status_code})
 
     def status(self):
-        r = self.client(method="GET", endpoint="me/player")
+        r = self.client(method="GET", endpoint="/me/player")
         if r.status_code == 200 and r.json()["is_playing"] is True:
             item = r.json()["item"]
-            message = f"Now Playing: {item['name']} by {item['artists'][0]['name']} on {r.json()['device']['name']}"
+            message = f"Now Playing: {item['name']} by {item['artists'][0]['name']} on {r.json()['device']['name']}" # noqa
             print(message)
             return [item["artists"][0]["name"], item["name"], item["uri"]]
 
@@ -95,14 +95,15 @@ Options:
 'next' to advance the next track
 'pause' pauses the music
 'status' shows current player status
-'player <search type> <query>' accepts 'artist' or 'album' for search type, the artist or album name for the query
+'player <search type> <query>' accepts 'artist' or 'album' for search type, the artist
+or album name for the query
 """
         )
 
 
 if __name__ == "__main__":
     session = CLISpotify()
-    if sys.argv[1] == "help" or sys.argv == None:
+    if sys.argv[1] == "help" or sys.argv is None:
         session.help()
     elif sys.argv[1] == "next":
         session.next_track()

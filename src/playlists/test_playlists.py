@@ -29,7 +29,7 @@ class TestPlaylists:
         responses.put(BASE_URL + "me/player/play", status=204)
         assert session.play_playlist(playlist_id="1234arst") == {
             "status": 204,
-            "playlist_id": "1234arst",
+            "context_uri": "spotify:playlist:1234arst",
         }
 
     @responses.activate
@@ -65,3 +65,32 @@ class TestPlaylists:
             json={"item": {"uri": "spotify:track:324enh2894ht"}},
         )
         assert session.get_current_track().startswith("spotify:track")
+
+    @responses.activate
+    def test_find_duplicates(self, session):
+        responses.get(
+            BASE_URL + "playlists/w09n23ient9ie/tracks",
+            json={
+                "items": [
+                    {"track": {"id": "abc12345"}},
+                    {"track": {"id": "xyz09876"}},
+                    {"track": {"id": "abc12345"}},
+                ]
+            },
+        )
+        assert session.find_duplicates("w09n23ient9ie") == ["abc12345"]
+
+    @responses.activate
+    def test_delete_tracks(self, session):
+        responses.delete(
+            BASE_URL + "playlists/ot293ne42tnu/tracks", json={"snapshot_id": "abc123"}
+        )
+        track_list = ["abc123", "xyz098"]
+        assert session.delete_tracks(
+            track_list=track_list, playlist_id="ot293ne42tnu"
+        ) == {"snapshot_id": "abc123"}
+
+    @responses.activate
+    def test_recommend(self, session):
+        responses.get(BASE_URL + "recommendations", json={"abc": "123"})
+        assert session.recommend(seed_tracks=["abc", "def"]) == {"abc": "123"}
